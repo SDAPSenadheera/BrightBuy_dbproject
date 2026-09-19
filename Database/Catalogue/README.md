@@ -215,14 +215,21 @@ milestone 1 and a fresh installation. Seed reruns, preservation of changed
 variant price/stock, and rejection of a conflicting variant ID without partial
 inserts also passed. Inventory SQL files were executed unchanged.
 
-The read procedures are implemented in milestone 3. Backend APIs and frontend
-pages remain for later milestones. Tests use sequential hierarchy edits;
+The read procedures are implemented in milestone 3. Milestone 4 adds Spring Boot
+APIs for categories, product search and product details; setup and HTTP contracts
+are documented in [Backend/CATALOGUE_API.md](../../Backend/CATALOGUE_API.md).
+Frontend pages remain for the next milestone. Tests use sequential hierarchy edits;
 concurrent category reparenting is not covered by this milestone.
 
 Milestone 3 validation on isolated MySQL **9.7.1**: **65 procedure assertions
 and 32 foundation assertions passed** (97 total), as did reinstalling `06` and
 executing all eleven examples in `04`. Procedure tests rolled back their row
 changes; the foundation suite confirmed the original fixtures afterward.
+
+Milestone 4 backend validation: **67 tests passed**, including four live
+HTTP-to-MySQL tests against the isolated MySQL 9.7.1 fixtures using a restricted
+database account. The Spring Boot application packaged successfully. See the
+backend guide above for the required database profile and test setup.
 
 ## Known External Issues
 
