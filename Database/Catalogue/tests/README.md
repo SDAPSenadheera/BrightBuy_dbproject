@@ -16,7 +16,32 @@ mysql --socket=/path/to/disposable/mysql.sock -u root -p < tests/test_foundation
 Expect a `PASS` result for each check and a final count. `FAIL` or another SQL
 error means the suite did not pass. It rolls back row changes even on failure.
 The file creates and removes test-only stored procedures; those are unrelated
-to the future catalogue business procedures in `06_catalogue_procedures.sql`.
+to the catalogue read procedures in `06_catalogue_procedures.sql`.
+
+## Procedure assertions (milestone 3)
+
+Install `06_catalogue_procedures.sql` on the disposable milestone-2 dataset,
+then run:
+
+```sh
+mysql --socket=/path/to/disposable/mysql.sock -u root -p < tests/test_procedures.sql
+```
+
+This calls the real public procedures and inspects their JSON output. Checks
+cover all sort modes, tied-price ordering, page boundaries and unique products,
+keyword/SKU/short-term search, root/child/inactive categories, combined price
+and stock filters on the same variant, metadata counts, product details,
+zero-stock options, invalid inventory rows, empty results and invalid input.
+Test row changes roll back on success or failure. Test helper procedures are
+removed on success and replaced on rerun; their DDL commits independently.
+
+Reinstall `06` and rerun the procedure suite to verify repeatable installation.
+Then rerun `test_foundation.sql` to verify fixture integrity. The test routines
+use different names, so the two suites do not depend on each other's helpers.
+
+Validated on isolated MySQL 9.7.1: **65 procedure assertions + 32 foundation
+assertions passed**. Procedure reinstallation and all eleven query examples
+also passed. The team's exact MySQL 8 version still needs verification.
 
 ## Seed and integration reruns
 
