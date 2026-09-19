@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Backend build output
+Backend/target/
+
+# Frontend generated files
+Frontend/node_modules/
+Frontend/dist/
+
+# Local secrets
+.env
+.env.local
+*.env
+Backend/src/main/resources/application-local.properties
