@@ -1,7 +1,7 @@
 # Catalogue SQL tests
 
-Use a disposable MySQL instance only. These tests are for the milestone-1
-fixtures: three products, ten categories and five inventory variants. No Python
+Use a disposable MySQL instance only. These tests are for the milestone-2
+fixtures: forty products, ten categories, forty-eight variants and eighty mappings. No Python
 or application backend is required. Do not change the team's shared database.
 
 ## Automated foundation assertions
@@ -21,8 +21,9 @@ to the future catalogue business procedures in `06_catalogue_procedures.sql`.
 ## Seed and integration reruns
 
 After a successful fresh setup, execute `03_catalogue_seed_data.sql` twice and
-`05_variant_integration.sql` twice, then run `tests/test_foundation.sql` again.
-It must still pass, with three products, ten categories, five variants and six
+`05_variant_integration.sql` twice and `05b_catalogue_variant_seed.sql` twice,
+then run `tests/test_foundation.sql` again.
+It must still pass, with forty products, ten categories, forty-eight variants and eighty
 assignments, one variant-product foreign key and one supporting index.
 
 To check repair of the previous placeholder mappings, first run:
@@ -37,7 +38,7 @@ Execute `03_catalogue_seed_data.sql`, then check:
 
 ```sql
 SELECT product_id, category_id
-FROM product_category ORDER BY product_id, category_id;
+FROM product_category WHERE product_id <= 3 ORDER BY product_id, category_id;
 -- Expect: (1,1), (1,4), (1,6), (2,1), (2,4), (3,1), (3,5).
 -- The unrelated (1,6) mapping must survive; the four old mappings must disappear.
 
@@ -92,4 +93,41 @@ Run each case below separately and inspect the expected error before proceeding.
    ```
 
 Finally, execute `05_variant_integration.sql` successfully twice, then run
-`tests/test_foundation.sql`. No inventory source files need to be modified.
+`05b_catalogue_variant_seed.sql` and `tests/test_foundation.sql`.
+No inventory source files need to be modified.
+
+## Variant seed preservation and collision checks
+
+After a successful full setup on the disposable instance, change a catalogue
+variant's stock and price:
+
+```sql
+UPDATE variant SET stock_quantity=7, price=388.00 WHERE variant_id=1004;
+```
+
+Run `05b_catalogue_variant_seed.sql` again. It must leave those values at 7 and
+388.00. Restore the fixture before running the full assertion suite:
+
+```sql
+SELECT stock_quantity, price FROM variant WHERE variant_id=1004;
+UPDATE variant SET stock_quantity=15, price=399.00 WHERE variant_id=1004;
+```
+
+To test an ID conflict and ensure no partial inserts occur:
+
+```sql
+UPDATE variant SET product_id=5 WHERE variant_id=1004;
+DELETE FROM variant WHERE variant_id=1040; -- Remove only this test fixture.
+```
+
+Run `05b_catalogue_variant_seed.sql`. Expect `Catalogue variant ID collision`.
+The count must stay at 47, and variant 1040 must remain absent. Restore the
+identity and rerun the seed to restore variant 1040:
+
+```sql
+SELECT COUNT(*) FROM variant; -- Expect 47.
+SELECT COUNT(*) FROM variant WHERE variant_id=1040; -- Expect 0.
+UPDATE variant SET product_id=4 WHERE variant_id=1004;
+```
+
+Run `05b_catalogue_variant_seed.sql`, then `tests/test_foundation.sql`.

@@ -1,6 +1,6 @@
 -- Catalogue foundation regression tests (MySQL 8.0.19+).
 -- Run AFTER the README setup sequence on a disposable test database only.
--- Requires the milestone-1 fixtures: 3 products, 10 categories, 5 variants.
+-- Requires milestone-2 fixtures: 40 products, 10 categories, 48 variants.
 -- Outputs PASS per assertion; unexpected results raise SQLSTATE 45000.
 -- Test row changes are rolled back on success and on failure. DDL for these
 -- helper routines commits independently; AUTO_INCREMENT gaps may remain.
@@ -63,14 +63,64 @@ BEGIN
     START TRANSACTION;
 
     CALL catalogue_test_assert(
-        (SELECT COUNT(*) FROM product) = 3
+        (SELECT COUNT(*) FROM product) = 40
         AND (SELECT COUNT(*) FROM category) = 10
-        AND (SELECT COUNT(*) FROM variant) = 5, 'milestone-1 fixture counts');
+        AND (SELECT COUNT(*) FROM variant) = 48, 'milestone-2 fixture counts');
 
     CALL catalogue_test_assert(
         (SELECT GROUP_CONCAT(CONCAT(product_id, ':', category_id)
-                ORDER BY product_id, category_id) FROM product_category)
+                ORDER BY product_id, category_id) FROM product_category WHERE product_id <= 3)
         = '1:1,1:4,2:1,2:4,3:1,3:5', 'correct product-category mappings');
+
+    CALL catalogue_test_assert(
+        (SELECT COUNT(*) FROM product_category) = 80
+        AND NOT EXISTS (
+            SELECT p.product_id FROM product p
+            LEFT JOIN product_category pc ON pc.product_id = p.product_id
+            LEFT JOIN category c ON c.category_id = pc.category_id
+            GROUP BY p.product_id
+            HAVING COUNT(pc.category_id) <> 2 OR SUM(c.parent_category_id IS NOT NULL) <> 1
+        ), 'every product has one child and one root category');
+    CALL catalogue_test_assert(
+        NOT EXISTS (
+            SELECT 1 FROM product_category pc JOIN category c ON c.category_id = pc.category_id
+            WHERE c.parent_category_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM product_category parent_mapping
+                WHERE parent_mapping.product_id = pc.product_id
+                  AND parent_mapping.category_id = c.parent_category_id
+            )
+        ), 'child categories have matching root mappings');
+    CALL catalogue_test_assert(
+        (SELECT COUNT(DISTINCT c.category_id) FROM category c
+         JOIN product_category pc ON pc.category_id = c.category_id
+         WHERE c.parent_category_id IS NOT NULL) = 7, 'all seven child categories populated');
+    CALL catalogue_test_assert(
+        (SELECT COUNT(*) FROM product WHERE is_active = TRUE) = 39
+        AND (SELECT is_active FROM product WHERE product_id = 40) = FALSE,
+        '39 active products and one inactive fixture');
+    CALL catalogue_test_assert(
+        NOT EXISTS (SELECT 1 FROM variant v LEFT JOIN warehouse w ON w.warehouse_id = v.warehouse_id
+                    WHERE w.warehouse_id IS NULL OR v.price IS NULL OR v.price <= 0
+                       OR v.stock_quantity IS NULL OR v.stock_quantity < 0),
+        'all variants have warehouses positive prices and nonnegative stock');
+    CALL catalogue_test_assert(
+        (SELECT COUNT(*) FROM variant WHERE variant_id BETWEEN 1004 AND 1040
+          OR variant_id IN (1104,1114,1119,1125,1131,1136)) = 43,
+        '43 catalogue-owned variant fixtures');
+    CALL catalogue_test_assert(
+        (SELECT COUNT(*) FROM variant WHERE
+          (variant_id=1 AND product_id=1 AND warehouse_id=1 AND price=1099.00 AND stock_quantity=50) OR
+          (variant_id=2 AND product_id=1 AND warehouse_id=2 AND price=1099.00 AND stock_quantity=15) OR
+          (variant_id=3 AND product_id=1 AND warehouse_id=1 AND price=1299.00 AND stock_quantity=0) OR
+          (variant_id=4 AND product_id=2 AND warehouse_id=3 AND price=1299.99 AND stock_quantity=30) OR
+          (variant_id=5 AND product_id=3 AND warehouse_id=1 AND price=348.00 AND stock_quantity=120)) = 5,
+        'original inventory variant fixtures preserved');
+    CALL catalogue_test_assert(
+        (SELECT COUNT(*) FROM variant WHERE stock_quantity=0) = 3,
+        'three out-of-stock variant fixtures');
+    CALL catalogue_test_assert(
+        (SELECT COUNT(*) FROM (SELECT product_id FROM variant GROUP BY product_id HAVING COUNT(*) > 1)
+         AS multiple_options) = 7, 'seven products offer multiple variants');
 
     CALL catalogue_test_assert(
         (SELECT COUNT(*) FROM information_schema.key_column_usage
@@ -148,7 +198,8 @@ BEGIN
         (SELECT parent_category_id FROM category WHERE category_id = 5) = 2, 'valid reparenting');
 
     CALL catalogue_test_assert(
-        (SELECT COUNT(*) FROM product WHERE MATCH(name, description) AGAINST('headphones')) = 1,
+        (SELECT COUNT(*) FROM product WHERE product_id = 3
+         AND MATCH(name, description) AGAINST('headphones')) = 1,
         'full-text index works');
     CALL catalogue_test_assert(
         (SELECT COUNT(*) FROM product p WHERE NOT EXISTS

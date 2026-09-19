@@ -44,8 +44,9 @@ error; do not use `--force` or blindly continue after a failed script.
 5. `../Inventory_Delivery_DDL.sql`
 6. `../Inventory_Delivery_sample_data.sql`
 7. `05_variant_integration.sql`
-8. `04_catalogue_queries.sql`
-9. `07_catalogue_tests.sql`
+8. `05b_catalogue_variant_seed.sql`
+9. `04_catalogue_queries.sql`
+10. `07_catalogue_tests.sql`
 
 `06_catalogue_procedures.sql` is currently empty and is reserved for the next
 database milestone. Once implemented, run it before queries and tests that
@@ -58,7 +59,7 @@ mysql -u root -p < 00_create_database.sql &&
 for script in 01_catalogue_tables.sql 02_catalogue_indexes.sql \
     03_catalogue_seed_data.sql ../Inventory_Delivery_DDL.sql \
     ../Inventory_Delivery_sample_data.sql 05_variant_integration.sql \
-    04_catalogue_queries.sql 07_catalogue_tests.sql; do
+    05b_catalogue_variant_seed.sql 04_catalogue_queries.sql 07_catalogue_tests.sql; do
     mysql -u root -p brightbuy < "$script" || break
 done
 ```
@@ -67,9 +68,10 @@ done
 Do not drop an existing database to apply them. The inventory DDL and sample
 data are also one-time scripts. Catalogue seed (`03`) and integration (`05`)
 can be rerun after successful setup. The seed reserves category IDs 1–10 and
-product IDs 1–3 for these fixtures; run it against the agreed development data,
-not arbitrary existing catalogue records. It restores these fixtures to active
-and removes the four incorrect mappings from the original placeholder seed.
+product IDs 1–40 for these fixtures; run it against the agreed development data,
+not arbitrary existing catalogue records. It restores products 1–39 to active,
+keeps product 40 inactive and removes the four incorrect mappings from the
+original placeholder seed.
 
 The seed uses a transaction; after any error, roll it back or disconnect before
 continuing. Integration uses DDL, which commits independently: it is not an
@@ -78,6 +80,41 @@ all existing variants, reuses a supporting index, rejects incompatible foreign
 keys, sets `product_id` to `NOT NULL`, and creates the agreed foreign key.
 If integration fails, correct the reported issue and rerun `05`; its helper
 procedure is removed on success or replaced on the next run.
+
+## Milestone 2 dataset and upgrade
+
+The dataset contains **40 products, 10 categories, 80 category assignments and
+48 variants**. Each product belongs to one child category and its root category.
+All seven child categories contain products. The three original products and
+five inventory variants keep their IDs and values. Products 4–40 are fictional
+BrightBuy sample products; prices are demonstration values, not market quotes.
+
+`05b_catalogue_variant_seed.sql` adds 43 variants for the 37 new products after
+the inventory module has created its tables and warehouse data. It does not
+create another variant table or modify inventory-owned files. Its reserved
+variant IDs are **1004–1040, 1104, 1114, 1119, 1125, 1131 and 1136**; coordinate
+that range with the inventory owner before merging shared sample data. It
+reuses warehouses 1–3. Conflicting IDs or missing product/warehouse dependencies
+raise an error and roll back all inserts. Existing matching variants retain
+their price and stock on reruns; changing fixture values in the file will not
+overwrite inventory updates.
+
+For an existing milestone-1 development database, run only:
+
+```sh
+mysql -u root -p brightbuy < 03_catalogue_seed_data.sql &&
+mysql -u root -p brightbuy < 05b_catalogue_variant_seed.sql &&
+mysql -u root -p brightbuy < tests/test_foundation.sql
+```
+
+This assumes the milestone-1 schema and integration already succeeded. Do not
+rerun catalogue or inventory table creation against that existing database.
+
+Seven products offer multiple variant choices. Three variants have zero stock,
+and product 40 is inactive, providing sample cases for the later frontend.
+Product image URLs remain NULL until the frontend/image milestone. Fixtures
+restore catalogue descriptions and activation flags on rerun, so use these
+seed scripts for development/demo data only, with application writes paused.
 
 ## Business Rules
 
@@ -94,22 +131,23 @@ procedure is removed on success or replaced on the next run.
 - [x] Database initialization
 - [x] Catalogue tables
 - [x] Catalogue indexes
-- [ ] Forty products
+- [x] Forty products
 - [x] Ten categories seeded
 - [x] Correct mappings for the three initial products
-- [ ] Mappings for the full forty-product catalogue
+- [x] Mappings for the full forty-product catalogue
+- [x] At least one variant per product; 43 additional catalogue fixtures
 - [x] Variant foreign key and non-null product reference
 - [ ] Catalogue queries
 - [ ] Catalogue procedures
 - [ ] Catalogue tests
 - [ ] Integration verification
 
-## Milestone 1 validation
+## Database validation
 
 `tests/test_foundation.sql` runs entirely in MySQL; no Python is required.
 Complete the setup sequence above on a **disposable test database** first.
-The test script uses the existing `brightbuy` database and requires the initial
-three-product fixtures. Unlike the old runner, it does not create a database
+The test script uses the existing `brightbuy` database and requires the complete
+milestone-2 fixtures with their initial prices and stock. It does not create a database
 or execute the setup files automatically. Never run it on a shared or production
 database. Use a dedicated connection without pending work.
 
@@ -132,16 +170,21 @@ failure checks are documented separately in [tests/README.md](tests/README.md).
 MySQL 8.0.19+ is the intended syntax target; execution on the team's exact
 MySQL 8 version remains to be verified.
 
-Replacement SQL suite validated on 2026-09-19 against the isolated MySQL
-9.7.1 instance (`lower_case_table_names=1`): **23 assertions passed**. The
-additional manual integration failure scenarios were previously validated
-during milestone 1; they are now supplied as SQL instructions instead of a
-Python runner.
+Milestone 1 originally passed 23 SQL assertions. Milestone 2 extends the suite
+to **32 assertions**, adding full dataset coverage, matching child/root mappings,
+activation states, inventory fixture preservation, valid price/stock values,
+out-of-stock fixtures and multiple variant choices. Additional rerun and
+collision checks are described in `tests/README.md`.
 
-This checkpoint covers three products, ten categories and five existing
-inventory variants. It does not complete the forty-product dataset, catalogue
-procedures, backend APIs, or frontend pages. Tests use sequential hierarchy
-edits; concurrent category reparenting is not covered by this milestone.
+Validated on 2026-09-19 using isolated MySQL **9.7.1** instances with
+`lower_case_table_names=1`: all 32 assertions passed for both an upgrade from
+milestone 1 and a fresh installation. Seed reruns, preservation of changed
+variant price/stock, and rejection of a conflicting variant ID without partial
+inserts also passed. Inventory SQL files were executed unchanged.
+
+Catalogue business procedures, backend APIs and frontend pages remain for later
+milestones. Tests use sequential hierarchy edits; concurrent category reparenting
+is not covered by this milestone.
 
 ## Known External Issues
 
