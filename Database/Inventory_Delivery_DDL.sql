@@ -25,13 +25,3 @@ CREATE TABLE variant (
     FOREIGN KEY (warehouse_id) REFERENCES WAREHOUSE(warehouse_id)
 );
 
--- Delivery Table
-CREATE TABLE  delivery (
-    delivery_id INT PRIMARY KEY,
-    order_id INT, -- FK to Orders table (Adeesha part)
-    city_id INT,
-    delivery_mode VARCHAR(50),
-    est_delivery_date DATE,
-    delivery_status VARCHAR(50),
-    FOREIGN KEY (city_id) REFERENCES CITY(city_id)
-);
