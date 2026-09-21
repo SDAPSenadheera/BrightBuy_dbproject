@@ -6,7 +6,7 @@ SELECT
 	DATE(o.order_date) AS summary_date,
 	SUM(oi.quantity) AS units_sold,
 	SUM(oi.quantity*oi.unit_price) AS total_revenue,
-	COUNT(DISTINCT 0.order_id)
+	COUNT(DISTINCT o.order_id)
 FROM order_item oi
 JOIN orders o ON o.order_id = oi.order_id
 WHERE DATE(o.order_date) = CURDATE()-INTERVAL 1 DAY AND o.order_status NOT IN ('Cancelled')
@@ -24,7 +24,7 @@ VALUES (:employee_id, 'quarterly_sales_report');
 -- Quarterly sales report
 
 SELECT 
-	QUARTER(ss.summary_date),
+	QUARTER(ss.summary_date) AS quarter,
 	SUM(ss.order_count) AS order_count,
 	SUM(ss.total_revenue) AS total_revenue
 FROM sales_summary ss
@@ -35,7 +35,7 @@ ORDER BY quarter;
 -- Top selling products report
 
 SELECT 
-	p.product_i,
+	p.product_id,
 	p.name,
 	SUM(ss.units_sold) AS units_sold,
 	SUM(ss.total_revenue) AS revenue
@@ -43,7 +43,7 @@ FROM sales_summary ss
 JOIN variant v ON v.variant_id = ss.variant_id
 JOIN product p ON p.product_id = v.product_id
 WHERE ss.summary_date BETWEEN :start_date AND :end_date
-GROUP BY p.produt_id, p.name
+GROUP BY p.product_id, p.name
 ORDER BY units_sold DESC
 LIMIT :top_n;
 
@@ -54,7 +54,7 @@ SELECT
 	c.name,
 	COUNT(DISTINCT o.order_id) AS total_orders
 FROM order_item oi
-JOIN order o ON o.order_id = oi.order_id
+JOIN orders o ON o.order_id = oi.order_id
 JOIN variant v ON v.variant_id = oi.variant_id
 JOIN product_category pc ON pc.product_id = v.product_id
 JOIN category c ON c.category_id = pc.category_id
@@ -85,10 +85,10 @@ SELECT
 	cu.customer_id,
 	cu.first_name,
 	cu.last_name,
-	COUNT(o.total_amount) AS lifetime_spend,
-	GROUP_CONCAT(DISTINCT pay.payment_status) AS payment statuses
+	SUM(o.total_amount) AS lifetime_spend,
+	GROUP_CONCAT(DISTINCT p.payment_status) AS payment statuses
 FROM customer cu
-JOIN order o ON o.customer_id = cu.customer_id
+JOIN orders o ON o.customer_id = cu.customer_id
 LEFT JOIN payment p ON p.order_id = o.order_id
 GROUP BY cu.customer_id, cu.first_name, cu.last_name
 ORDER BY lifetime_spend DESC;
