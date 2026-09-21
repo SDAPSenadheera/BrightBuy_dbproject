@@ -1,13 +1,11 @@
 # Project work log
+# S.D.A.P. Senadheera
+# Role : 
 
 ## 2026.09.16
 
 ## Completed
- -- Inventory & Delivery
-   - Created the required tables for the Inventory & Delivery section.
-   - Inserted sample values into the Inventory & Delivery tables.
-
- -- Management reporting
+ -- Management reporting 
    - Created the required tables for the Management Reporting section.
    - Added sample/summary data insertion logic for the sales_summary table.
    - Added report_access_log insertion logic.
@@ -20,7 +18,9 @@
 
 
 ## NEXT
- -- Complete the database creation
-
+- Create API endpoints for each report.
+- Implement query parameters to extract `startDate` and `endDate` filters from the request.
+- Connect the Express routes to execute the completed MySQL queries.
+- Format and send the database results back to the client as JSON arrays.
 
 
