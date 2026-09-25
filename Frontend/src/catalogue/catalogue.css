@@ -89,6 +89,35 @@ body { margin: 0; }
 .catalogue-footer span:last-child { margin-left: auto; }
 .catalogue-visually-hidden, .catalogue-skip:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .catalogue-skip:focus { display: block; padding: 12px; background: white; }
+.catalogue-card h3 a { text-decoration: none; }
+.catalogue-card h3 a:hover { text-decoration: underline; color: var(--green); }
+.catalogue-back { display: inline-block; margin: 0 0 28px; font-size: 13px; text-underline-offset: 4px; }
+.catalogue-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 50px; align-items: start; }
+.catalogue-detail-image { height: auto; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+.catalogue-detail-image img { object-fit: contain; padding: 30px; min-height: 0; }
+.catalogue-detail-image .catalogue-image-placeholder svg { width: 110px; }
+.catalogue-detail-content h1, .catalogue-detail-state h1 { font: 500 38px/1.2 Georgia, serif; letter-spacing: -.8px; margin: 14px 0; overflow-wrap: anywhere; }
+.catalogue-detail-content h2 { font-size: 17px; margin: 28px 0 12px; }
+.catalogue-detail-stock { display: inline-block; background: #e7eee4; color: #235739; border-radius: 4px; padding: 5px 10px; margin: 22px 0 12px !important; font-size: 12px; }
+.catalogue-detail-stock.unavailable { color: #895231; background: #f4ebe2; }
+.catalogue-detail-price { font-size: 27px; font-weight: 650; overflow-wrap: anywhere; }
+.catalogue-detail-content .catalogue-fine-print { margin-top: 8px !important; }
+.catalogue-description { white-space: pre-line; overflow-wrap: anywhere; color: #52675b; line-height: 1.8; }
+.catalogue-detail-categories { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.catalogue-detail-categories a { display: inline-block; border: 1px solid var(--line); border-radius: 5px; padding: 7px 12px; font-size: 13px; text-decoration: none; }
+.catalogue-detail-categories a:hover { background: #e7eee4; }
+.catalogue-detail-state { border: 1px solid var(--line); border-radius: 10px; background: white; padding: 32px; }
+.catalogue-detail-state p { margin: 15px 0 22px; color: var(--muted); }
+.catalogue-detail-state button { margin-right: 20px; }
+.catalogue-detail-state a { display: inline-block; font-size: 14px; text-underline-offset: 4px; }
+.catalogue-detail-skeleton { height: 220px; background: #ecf0e8; border-radius: 8px; }
+@media (max-width: 700px) {
+  .catalogue-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 25px; }
+  .catalogue-detail-image { max-height: 350px; width: 100%; }
+  .catalogue-detail-content h1, .catalogue-detail-state h1 { font-size: 30px; }
+  .catalogue-detail-price { font-size: 23px; }
+  .catalogue-detail-state { padding: 24px; }
+}
 @media (min-width: 1600px) { .catalogue-hero { min-height: 320px; } }
 @media (max-width: 1100px) { .catalogue-header { gap: 25px; } .catalogue-header-note { display: none; } .catalogue-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .catalogue-layout { gap: 25px; grid-template-columns: 200px minmax(0, 1fr); } .catalogue-hero { padding: 35px; } .catalogue-hero-art { margin-right: 0; width: 230px; } .catalogue-results-header { align-items: flex-start; flex-direction: column; } .catalogue-footer { margin: 0 48px; } }
 @media (max-width: 700px) { .catalogue-header { flex-wrap: wrap; padding: 20px; gap: 20px; } .catalogue-brand { font-size: 22px; } .catalogue-search { flex-basis: 100%; } .catalogue-app main { padding: 0 20px 40px; } .catalogue-hero { padding: 28px; min-height: 280px; } .catalogue-hero-art { display: none; } .catalogue-hero h1 { font-size: 37px; } .catalogue-layout { grid-template-columns: 1fr; gap: 30px; } .catalogue-sidebar nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .catalogue-sidebar nav button { font-size: 12px; } .catalogue-sidebar nav button.child { padding-left: 12px; } .catalogue-price-form { margin-top: 18px; } .catalogue-price-form .catalogue-primary { max-width: 200px; } .catalogue-app .catalogue-text-button { width: auto; margin-left: 10px; } .catalogue-fine-print { margin-top: 12px !important; } .catalogue-results-header { flex-direction: row; align-items: center; gap: 10px; } .catalogue-sort { display: grid; gap: 3px; } .catalogue-sort select { max-width: 145px; } .catalogue-results h2 { font-size: 23px; } .catalogue-grid { gap: 12px; } .catalogue-product-image { height: 145px; } .catalogue-card-content { padding: 12px; } .catalogue-card h3 { font-size: 13px; } .catalogue-product-price { font-size: 14px; } .catalogue-footer { margin: 0 20px; flex-wrap: wrap; } }
