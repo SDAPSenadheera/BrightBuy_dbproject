@@ -5,10 +5,9 @@ import type { Category, Product } from './api'
 import { defaultSearch, formatPrice, parseSearch, searchParams, sorts } from './search'
 import type { Search } from './search'
 import { navigate, useCatalogue, useSearchLocation } from './useCatalogue'
-
-function PackageIcon() {
-  return <svg viewBox="0 0 80 80" fill="none" aria-hidden="true"><path d="m40 12 26 14v29L40 70 14 55V26l26-14Z" /><path d="m14 26 26 15 26-15M40 41v29M27 19l26 15v14" /></svg>
-}
+import { catalogueHref, parseCatalogueRoute } from './routes'
+import ProductDetailPage from './ProductDetailPage'
+import ProductImage, { PackageIcon } from './ProductImage'
 
 function ErrorNotice({ message, retry }: { message: string; retry: () => void }) {
   return <div className="catalogue-notice" role="alert"><h3>Something needs attention</h3><p>{message}</p><button onClick={retry}>Try again</button></div>
@@ -59,20 +58,16 @@ function Filters({ query, categories }: { query: Search; categories: Category[] 
   </aside>
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const [imageFailed, setImageFailed] = useState(false)
+function ProductCard({ product, query }: { product: Product; query: Search }) {
   const inStock = product.matching_stock_quantity > 0
-  // Only http(s) images or local relative paths; do not execute arbitrary URL schemes.
-  const safeImage = product.image_url && /^(https?:\/\/|\/[^/])/.test(product.image_url) ? product.image_url : null
   return <article className="catalogue-card">
     <div className="catalogue-product-image">
       <span className={`catalogue-stock ${inStock ? '' : 'unavailable'}`}>{inStock ? 'In stock' : 'Out of stock'}</span>
-      {safeImage && !imageFailed ? <img src={safeImage} alt={product.name} loading="lazy" onError={() => setImageFailed(true)} />
-        : <div className="catalogue-image-placeholder"><PackageIcon /><span>Image coming soon</span></div>}
+      <ProductImage src={product.image_url} name={product.name} />
     </div>
     <div className="catalogue-card-content">
       <p className="catalogue-sku">{product.sku}</p>
-      <h3>{product.name}</h3>
+      <h3><a href={catalogueHref(query, product.product_id)}>{product.name}</a></h3>
       <p className="catalogue-product-price">{formatPrice(product.min_price)}{product.max_price !== product.min_price && <><span> – </span>{formatPrice(product.max_price)}</>}</p>
       <p className="catalogue-card-caption">{product.matching_variant_count} matching {product.matching_variant_count === 1 ? 'variant' : 'variants'}<span aria-hidden="true"> · </span>{product.matching_stock_quantity} units available</p>
     </div>
@@ -97,7 +92,7 @@ function Results({ query, title }: { query: Search; title: string }) {
       <button onClick={() => navigate(data.total_products ? { ...query, page: 1 } : defaultSearch)}>{data.total_products ? 'Go to first page' : 'Clear search & filters'}</button>
     </div>}
     {data && data.items.length > 0 && <>
-      <div className="catalogue-grid">{data.items.map(product => <ProductCard key={`${product.product_id}:${product.image_url}`} product={product} />)}</div>
+      <div className="catalogue-grid">{data.items.map(product => <ProductCard key={`${product.product_id}:${product.image_url}`} product={product} query={query} />)}</div>
       <nav className="catalogue-pagination" aria-label="Product pages">
         <button disabled={query.page <= 1} onClick={() => navigate({ ...query, page: query.page - 1 })}>← Previous</button>
         <span>Page {data.page} of {data.total_pages}</span>
@@ -111,8 +106,14 @@ export default function CatalogueApp() {
   const location = useSearchLocation()
   const categories = useCatalogue('/categories', decodeCategories)
   let query = defaultSearch
-  let linkError = ''
-  try { query = parseSearch(new URLSearchParams(location)) }
+  let linkError: string
+  let productId: number | null = null
+  try {
+    const route = parseCatalogueRoute(location)
+    query = route.query
+    productId = route.productId
+    linkError = route.error
+  }
   catch (error) { linkError = (error as Error).message }
   const [searchError, setSearchError] = useState('')
   const activeCategory = categories.data?.find(category => String(category.category_id) === query.categoryId)
@@ -138,12 +139,13 @@ export default function CatalogueApp() {
     </header>
     {searchError && <p className="catalogue-field-error catalogue-search-error" id="search-error" role="alert">{searchError}</p>}
     <main id="catalogue-content">
-      <section className="catalogue-hero" aria-labelledby="catalogue-heading">
+      {!productId && !linkError && <section className="catalogue-hero" aria-labelledby="catalogue-heading">
         <div><p className="catalogue-section-label">WELCOME TO BRIGHTBUY</p><h1 id="catalogue-heading">Good finds.<br /><em>Everyday possibilities.</em></h1><p>Explore the collection. Find the details that make it yours.</p><a href="#results-heading">Explore products <span aria-hidden="true">↘</span></a></div>
         <div className="catalogue-hero-art" aria-hidden="true"><div className="catalogue-art-orbit" /><div className="catalogue-art-box"><PackageIcon /></div><span className="catalogue-art-caption">YOUR NEXT FIND</span><span className="catalogue-art-spark">✳</span></div>
-      </section>
-      <div className="catalogue-breadcrumb"><a href={window.location.pathname}>Home</a><span aria-hidden="true">/</span><span>{title}</span></div>
-      {linkError ? <ErrorNotice message={linkError} retry={() => navigate(defaultSearch)} /> : <div className="catalogue-layout">
+      </section>}
+      <div className="catalogue-breadcrumb"><a href={window.location.pathname}>Home</a><span aria-hidden="true">/</span><span>{productId ? 'Product details' : title}</span></div>
+      {linkError ? <div className="catalogue-detail-state" role="alert"><h1>Invalid catalogue link</h1><p>{linkError}</p><a href={catalogueHref(query)}>Back to results</a></div>
+        : productId ? <ProductDetailPage key={productId} productId={productId} query={query} /> : <div className="catalogue-layout">
         <div>
           {categories.loading && <p role="status">Loading categories…</p>}
           {categories.error && <ErrorNotice message={categories.error} retry={categories.retry} />}
