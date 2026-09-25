@@ -45,12 +45,13 @@ error; do not use `--force` or blindly continue after a failed script.
 6. `../Inventory_Delivery_sample_data.sql`
 7. `05_variant_integration.sql`
 8. `05b_catalogue_variant_seed.sql`
-9. `04_catalogue_queries.sql`
-10. `07_catalogue_tests.sql`
+9. `06_catalogue_procedures.sql`
+10. `04_catalogue_queries.sql`
+11. `07_catalogue_tests.sql`
 
-`06_catalogue_procedures.sql` is currently empty and is reserved for the next
-database milestone. Once implemented, run it before queries and tests that
-depend on those procedures.
+The procedure installer (`06`) runs before the example calls in `04`, despite
+their numeric filenames. It can be reinstalled without changing catalogue data;
+it replaces one view and three routines. Install while application calls are paused.
 
 Example using the MySQL CLI (replace the username if needed):
 
@@ -59,7 +60,8 @@ mysql -u root -p < 00_create_database.sql &&
 for script in 01_catalogue_tables.sql 02_catalogue_indexes.sql \
     03_catalogue_seed_data.sql ../Inventory_Delivery_DDL.sql \
     ../Inventory_Delivery_sample_data.sql 05_variant_integration.sql \
-    05b_catalogue_variant_seed.sql 04_catalogue_queries.sql 07_catalogue_tests.sql; do
+    05b_catalogue_variant_seed.sql 06_catalogue_procedures.sql \
+    04_catalogue_queries.sql 07_catalogue_tests.sql; do
     mysql -u root -p brightbuy < "$script" || break
 done
 ```
@@ -116,6 +118,36 @@ Product image URLs remain NULL until the frontend/image milestone. Fixtures
 restore catalogue descriptions and activation flags on rerun, so use these
 seed scripts for development/demo data only, with application writes paused.
 
+## Milestone 3 procedures and queries
+
+`06_catalogue_procedures.sql` installs three read-only procedures:
+
+- `sp_catalogue_categories`: visible categories and distinct active product counts.
+- `sp_catalogue_search`: keyword/category/price/stock filters, five sort modes,
+  one product per result, and page metadata with deterministic ordering.
+- `sp_catalogue_product_detail`: active product information, visible categories,
+  and ordered variants including out-of-stock choices.
+
+Each procedure returns a JSON value through an OUT parameter. This gives the
+future Spring Boot catalogue API one documented response to consume and allows
+SQL-only tests to inspect the actual results. Their common
+`catalogue_public_variants` view excludes inactive products and invalid inventory
+price/stock rows. No routine writes rows, starts/commits transactions, or handles
+checkout. See [PROCEDURES.md](PROCEDURES.md) for signatures, defaults, response
+fields, error states and category/price/search semantics.
+
+To upgrade an existing milestone-2 development database, install `06` and run
+the two test suites. Do not recreate tables or rerun inventory seeds:
+
+```sh
+mysql -u root -p brightbuy < 06_catalogue_procedures.sql &&
+mysql -u root -p brightbuy < tests/test_procedures.sql &&
+mysql -u root -p brightbuy < tests/test_foundation.sql
+```
+
+`04_catalogue_queries.sql` retains the seven illustrative SQL queries, improves
+their visibility checks and sorting, and adds four runnable procedure examples.
+
 ## Business Rules
 
 - SKU is unique at product level.
@@ -137,10 +169,11 @@ seed scripts for development/demo data only, with application writes paused.
 - [x] Mappings for the full forty-product catalogue
 - [x] At least one variant per product; 43 additional catalogue fixtures
 - [x] Variant foreign key and non-null product reference
-- [ ] Catalogue queries
-- [ ] Catalogue procedures
-- [ ] Catalogue tests
-- [ ] Integration verification
+- [x] Catalogue read queries
+- [x] Catalogue read procedures (categories, search and product detail)
+- [x] Catalogue SQL tests
+- [ ] Verification on the team's exact MySQL version
+- [ ] Backend/frontend integration verification
 
 ## Database validation
 
@@ -182,9 +215,21 @@ milestone 1 and a fresh installation. Seed reruns, preservation of changed
 variant price/stock, and rejection of a conflicting variant ID without partial
 inserts also passed. Inventory SQL files were executed unchanged.
 
-Catalogue business procedures, backend APIs and frontend pages remain for later
-milestones. Tests use sequential hierarchy edits; concurrent category reparenting
-is not covered by this milestone.
+The read procedures are implemented in milestone 3. Milestone 4 adds Spring Boot
+APIs for categories, product search and product details; setup and HTTP contracts
+are documented in [Backend/CATALOGUE_API.md](../../Backend/CATALOGUE_API.md).
+Frontend pages remain for the next milestone. Tests use sequential hierarchy edits;
+concurrent category reparenting is not covered by this milestone.
+
+Milestone 3 validation on isolated MySQL **9.7.1**: **65 procedure assertions
+and 32 foundation assertions passed** (97 total), as did reinstalling `06` and
+executing all eleven examples in `04`. Procedure tests rolled back their row
+changes; the foundation suite confirmed the original fixtures afterward.
+
+Milestone 4 backend validation: **67 tests passed**, including four live
+HTTP-to-MySQL tests against the isolated MySQL 9.7.1 fixtures using a restricted
+database account. The Spring Boot application packaged successfully. See the
+backend guide above for the required database profile and test setup.
 
 ## Known External Issues
 
