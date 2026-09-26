@@ -11,6 +11,43 @@ shared seed also inserts deliveries that need checkout tables and orders
 failed setup script or treat the historical MySQL 9.7.1 results as a successful
 run of the current combined installer.
 
+## Read-only setup diagnostic
+
+`check_setup_prerequisites.sql` is separate from the assertion suites below.
+Run it before the shared seed (step 6), after steps 1–5 and the owners' schema
+setup. It is also safe to run earlier to see missing prerequisites. From
+`Database/Catalogue`, select your test instance explicitly:
+
+```sh
+mysql --socket=/path/to/disposable/mysql.sock -u root -p < tests/check_setup_prerequisites.sql
+```
+
+The script uses only SELECT statements and does not require a selected database.
+It can report missing `brightbuy` tables without trying to query those tables.
+Use an account allowed to inspect all required tables; hidden metadata can look
+like a missing object. It checks server/version information, session foreign-key,
+unique and strict-mode settings, inventory casing risk, eight base tables and
+the seven checkout columns needed by the delivery seed/order reference.
+
+- `BLOCK`: do not continue setup until the issue is resolved.
+- `REVIEW`: manual verification remains necessary, including exact-version tests.
+- `PASS`: only that individual metadata/session check passed.
+
+This is a diagnostic report, not an automated gate: BLOCK rows do not cause a
+nonzero client exit code. No result certifies a successful full installation.
+It does not inspect existing rows, validate all column types/foreign keys or
+detect duplicate seed IDs. Ask the owners to verify the checkout/auth contract
+and orders 101–104 before step 6; do not use this report to justify rerunning a
+failed shared seed. MySQL 9 results do not establish MySQL 8 compatibility.
+
+Diagnostic validation (2026-09-26, existing disposable MySQL 9.7.1 instance):
+the script completed and reported the missing `orders` table/column. A separate
+connection with foreign-key checks, unique checks and strict mode disabled
+reported all three as `BLOCK`. An in-memory copy targeting a nonexistent schema
+reported all eight tables and seven columns as `BLOCK` without SQL errors.
+No stored data or schema was changed. Case-sensitive-server and MySQL 8 execution
+remain unverified; the full assertion suites were not rerun for this milestone.
+
 ## Automated foundation assertions
 
 Follow the parent README's setup order, then execute `test_foundation.sql` in

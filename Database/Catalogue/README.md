@@ -79,6 +79,22 @@ A failure in the shared seed can leave earlier city, warehouse and variant
 inserts committed. Stop and inspect that test instance with the relevant owner;
 blindly rerunning the entire seed can then fail on duplicate primary keys.
 
+Before step 6, run the optional read-only prerequisite diagnostic from
+`Database/Catalogue` (use connection settings for your disposable instance):
+
+```sh
+mysql -u root -p < tests/check_setup_prerequisites.sql
+```
+
+It reports server/session settings, required base tables and checkout columns
+without changing data or creating helper routines. `BLOCK` means stop;
+`REVIEW` means manual verification is still needed. It prints diagnostic rows,
+not SQL errors: a zero client exit status does **not** mean setup is ready.
+Use an account with metadata visibility for all `brightbuy` tables. This check
+does not validate fixture rows, complete schema contracts or seed collisions;
+the owners must still verify orders 101–104 and the prerequisites above.
+See [diagnostic checks](tests/README.md#read-only-setup-diagnostic) for details.
+
 ### MySQL CLI examples
 
 Use these only after the relevant blockers are resolved, with a fresh disposable
