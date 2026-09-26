@@ -233,6 +233,7 @@ their visibility checks and sorting, and adds four runnable procedure examples.
 - [x] Catalogue read queries
 - [x] Catalogue read procedures (categories, search and product detail)
 - [x] Catalogue SQL tests
+- [x] Catalogue-only MySQL 8.0.46 Docker validation (97 assertions and reruns)
 - [ ] Fresh full-project installation after resolving shared seed dependencies
 - [ ] Verification on the team's exact MySQL version
 - [ ] Backend/frontend integration verification
@@ -293,10 +294,18 @@ HTTP-to-MySQL tests against the isolated MySQL 9.7.1 fixtures using a restricted
 database account. The Spring Boot application packaged successfully. See the
 backend guide above for the required database profile and test setup.
 
-These dated results describe earlier isolated test runs, not verification of
+The historical MySQL 9.7.1 results describe earlier isolated test runs, not verification of
 the current combined fresh-install sequence. The path/dependency documentation
 update does not execute SQL or establish MySQL 8 compatibility. Repeat the
 fresh-install and rerun checks after the shared prerequisites are resolved.
+
+On 2026-09-26, the catalogue-only setup passed all **97 assertions on MySQL
+8.0.46** in an isolated Docker container, then passed them again after two
+rounds of seed/integration/procedure reruns. Query examples and smoke queries
+also executed successfully. This run used case-insensitive table names and
+only the inventory portion of the shared seed; checkout/delivery setup remains
+unverified. See [the Docker validation record](tests/MYSQL8_DOCKER.md) for the
+pinned image, exact scope, connection commands and reproducible setup.
 
 ## Known External Issues
 

@@ -11,6 +11,12 @@ shared seed also inserts deliveries that need checkout tables and orders
 failed setup script or treat the historical MySQL 9.7.1 results as a successful
 run of the current combined installer.
 
+For a catalogue-only environment without those checkout dependencies, see
+[isolated MySQL 8 Docker validation](MYSQL8_DOCKER.md). On 2026-09-26, both
+suites passed on MySQL **8.0.46** (97 assertions), including after installer
+reruns. The record explains the deliberately limited shared-seed subset and
+why this does not verify the full-project installer or case-sensitive setup.
+
 ## Read-only setup diagnostic
 
 `check_setup_prerequisites.sql` is separate from the assertion suites below.
