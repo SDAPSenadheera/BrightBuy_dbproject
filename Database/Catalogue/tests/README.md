@@ -174,6 +174,56 @@ No inventory source files need to be modified.
 
 ## Variant seed preservation and collision checks
 
+### Automated SQL regression
+
+`test_variant_seed.sql` checks price/stock preservation, repeatability, the exact
+collision error, no partial insert, retry after correcting a conflict, and
+restoration of the two touched fixtures (eight assertions). Use only the
+prepared disposable Docker catalogue database, with application writes paused.
+
+The production seed commits internally and drops its helper after execution.
+For this test, load that **same procedure definition**, omitting only the final
+CALL and DROP lines from the input stream. No source file or production seed
+behavior is changed. Run from the repository root:
+
+```sh
+(
+set -e
+set -o pipefail
+docker exec -i brightbuy-catalogue-mysql8 mysql --protocol=socket -u root \
+  < Database/Catalogue/tests/test_foundation.sql
+sed '/^CALL seed_catalogue_variants();$/d; /^DROP PROCEDURE seed_catalogue_variants;$/d' \
+  Database/Catalogue/05b_catalogue_variant_seed.sql \
+  | docker exec -i brightbuy-catalogue-mysql8 mysql --protocol=socket -u root
+docker exec -i brightbuy-catalogue-mysql8 mysql --protocol=socket -u root \
+  < Database/Catalogue/tests/test_variant_seed.sql
+docker exec -i brightbuy-catalogue-mysql8 mysql --protocol=socket -u root \
+  < Database/Catalogue/tests/test_foundation.sql
+docker exec -i brightbuy-catalogue-mysql8 mysql --protocol=socket -u root \
+  < Database/Catalogue/tests/test_procedures.sql
+)
+```
+
+Expect eight PASS results and a summary from the new suite, then 32 foundation
+and 65 procedure assertions. An unexpected error stops the block; never use
+`--force`. The suite explicitly restores variants 1004 and 1040 from a temporary
+snapshot on success or SQL error, rather than claiming that one ROLLBACK undoes
+the seed's commits. If the server/connection dies or restoration itself fails,
+rebuild the disposable test database before proceeding. Helper DDL is not
+rolled back; a failed run can leave test routines installed. Rerun the full
+block after resolving the failure to replace them and remove them on success.
+Inspect the extraction command if the seed installer structure changes.
+
+Validated on the isolated MySQL **8.0.46** container: all eight assertions passed,
+then all 32 foundation and 65 procedure assertions passed (**105 distinct checks**).
+A container-only helper with an intentionally wrong collision error message
+made the suite fail as expected; variants 1004 and 1040 were restored and all
+32 foundation assertions still passed. Reloading the unmodified seed definition
+made all eight checks pass again and removed the seed/test helper routines.
+The production source file was not changed for this fault-injection check.
+
+### Manual alternative
+
 After a successful full setup on the disposable instance, change a catalogue
 variant's stock and price:
 

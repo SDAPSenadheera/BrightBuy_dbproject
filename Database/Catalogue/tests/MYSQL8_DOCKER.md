@@ -28,6 +28,18 @@ every MySQL 8 release, the team's still-unconfirmed exact version, or HTTP/UI
 integration. Manual collision and pre-integration failure scenarios from the
 test README were not rerun in this milestone.
 
+### Follow-up: variant seed safety
+
+The later `test_variant_seed.sql` milestone adds **eight automated assertions**
+for changed price/stock preservation, repeatability, collision rejection,
+no partial insert, successful retry and fixture restoration. All eight passed
+on this MySQL 8.0.46 container, alongside the existing 97 assertions.
+A deliberately incorrect error message in a container-only helper also verified
+failure detection and cleanup; the real helper was reloaded and the suite passed
+again. No source seed changes were required. See the
+[automated SQL regression instructions](README.md#automated-sql-regression).
+Pre-integration failure scenarios remain outstanding.
+
 ## Existing container
 
 Container name: `brightbuy-catalogue-mysql8`.
