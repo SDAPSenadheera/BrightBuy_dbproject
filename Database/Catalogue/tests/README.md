@@ -11,6 +11,15 @@ shared seed also inserts deliveries that need checkout tables and orders
 failed setup script or treat the historical MySQL 9.7.1 results as a successful
 run of the current combined installer.
 
+Checkout's corrected schema is now `Database/Checkout/01_checkout_schema.sql`.
+The customer schema and required order fixtures are still missing from this
+checkout; `03_checkout_seed_data.sql` does not supply a compatible combined
+dataset. Follow the parent README's prerequisite stop before step 6.
+The unmerged inventory update has different fixtures, foreign-key behavior,
+stock constraints and triggers: see the
+[pending inventory integration checklist](../README.md#pending-inventory-branch-integration)
+before applying it. The existing test results do not validate that branch.
+
 For a catalogue-only environment without those checkout dependencies, see
 [isolated MySQL 8 Docker validation](MYSQL8_DOCKER.md). On 2026-09-26, both
 suites passed on MySQL **8.0.46** (97 assertions), including after installer
