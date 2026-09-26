@@ -32,7 +32,9 @@ The reporting module requires these exact names:
 
 ## Execution Order
 
-For a fresh database, run the scripts below from `Database/Catalogue`.
+The sequence below is for a fresh, disposable development/test instance,
+starting in `Database/Catalogue`. It is **not yet an unattended full-project
+installer**: the shared inventory seed has checkout dependencies described below.
 Select `brightbuy` explicitly when executing the inventory scripts, which do
 not contain their own `USE` statement. Use a client that stops on the first
 error; do not use `--force` or blindly continue after a failed script.
@@ -41,8 +43,13 @@ error; do not use `--force` or blindly continue after a failed script.
 2. `01_catalogue_tables.sql`
 3. `02_catalogue_indexes.sql`
 4. `03_catalogue_seed_data.sql`
-5. `../Inventory_Delivery_DDL.sql`
-6. `../Inventory_Delivery_sample_data.sql`
+5. `../Inventory & Delivery/Inventory_Delivery_DDL.sql`
+
+   Before step 6, the checkout/auth owners must provide the required customer,
+   orders and delivery schema, plus valid order fixtures 101–104. Resolve the
+   blockers below first; these prerequisites are not created by catalogue SQL.
+
+6. `../Inventory & Delivery/Inventory_Delivery_sample_data.sql`
 7. `05_variant_integration.sql`
 8. `05b_catalogue_variant_seed.sql`
 9. `06_catalogue_procedures.sql`
@@ -53,17 +60,55 @@ The procedure installer (`06`) runs before the example calls in `04`, despite
 their numeric filenames. It can be reinstalled without changing catalogue data;
 it replaces one view and three routines. Install while application calls are paused.
 
-Example using the MySQL CLI (replace the username if needed):
+### Fresh-install blockers to resolve with the owners
+
+- **Inventory owner:** the DDL references `WAREHOUSE` but creates `warehouse`.
+  Confirm matching table names on the target server; case-sensitive servers
+  can reject this foreign key. Do not change an existing server's case settings.
+- **Checkout/auth owners:** the shared seed includes `delivery` rows referencing
+  orders 101–104. The inventory DDL does not create `delivery` or `orders`.
+  The current `../Inventory & Delivery/checkout_schema.sql` is not a ready
+  prerequisite: it has missing commas, uses `varient_id` instead of the shared
+  `variant_id`, and depends on a customer table not supplied by catalogue.
+- **Joint setup agreement:** obtain a corrected checkout/auth setup and valid
+  order fixtures before step 6, or ask the inventory owner to separate their
+  inventory-only seeds from delivery seeds. Do not create duplicate teammate
+  tables, disable foreign-key checks, or ignore a failed delivery insert.
+
+A failure in the shared seed can leave earlier city, warehouse and variant
+inserts committed. Stop and inspect that test instance with the relevant owner;
+blindly rerunning the entire seed can then fail on duplicate primary keys.
+
+### MySQL CLI examples
+
+Use these only after the relevant blockers are resolved, with a fresh disposable
+instance selected by your MySQL connection settings (replace the username as
+needed). Paths containing spaces and `&` must stay quoted.
+
+First, run steps 1–5. The subshell exits on failure without closing your terminal:
 
 ```sh
-mysql -u root -p < 00_create_database.sql &&
+(
+mysql -u root -p < 00_create_database.sql || exit 1
 for script in 01_catalogue_tables.sql 02_catalogue_indexes.sql \
-    03_catalogue_seed_data.sql ../Inventory_Delivery_DDL.sql \
-    ../Inventory_Delivery_sample_data.sql 05_variant_integration.sql \
+    03_catalogue_seed_data.sql "../Inventory & Delivery/Inventory_Delivery_DDL.sql"; do
+    mysql -u root -p brightbuy < "$script" || exit 1
+done
+)
+```
+
+**Stop here until the owners' schema and order fixtures are ready.** Then run
+steps 6–11; do not run this second block if the first block or prerequisites failed:
+
+```sh
+(
+for script in "../Inventory & Delivery/Inventory_Delivery_sample_data.sql" \
+    05_variant_integration.sql \
     05b_catalogue_variant_seed.sql 06_catalogue_procedures.sql \
     04_catalogue_queries.sql 07_catalogue_tests.sql; do
-    mysql -u root -p brightbuy < "$script" || break
+    mysql -u root -p brightbuy < "$script" || exit 1
 done
+)
 ```
 
 `01` and `02` are one-time setup scripts, not migrations for existing tables.
@@ -172,6 +217,7 @@ their visibility checks and sorting, and adds four runnable procedure examples.
 - [x] Catalogue read queries
 - [x] Catalogue read procedures (categories, search and product detail)
 - [x] Catalogue SQL tests
+- [ ] Fresh full-project installation after resolving shared seed dependencies
 - [ ] Verification on the team's exact MySQL version
 - [ ] Backend/frontend integration verification
 
@@ -231,17 +277,24 @@ HTTP-to-MySQL tests against the isolated MySQL 9.7.1 fixtures using a restricted
 database account. The Spring Boot application packaged successfully. See the
 backend guide above for the required database profile and test setup.
 
+These dated results describe earlier isolated test runs, not verification of
+the current combined fresh-install sequence. The path/dependency documentation
+update does not execute SQL or establish MySQL 8 compatibility. Repeat the
+fresh-install and rerun checks after the shared prerequisites are resolved.
+
 ## Known External Issues
 
-The inventory DDL creates lowercase `warehouse` and `city` tables but references
-uppercase `WAREHOUSE` and `CITY`. On servers with `lower_case_table_names=0`
+The inventory DDL creates lowercase `warehouse` but references uppercase
+`WAREHOUSE`. On servers with `lower_case_table_names=0`
 (commonly Linux), that script can fail. The test instance used case-insensitive
 table names. Coordinate a casing correction with the inventory owner before
 deploying to a case-sensitive server; do not change server settings on an
 existing database to work around it. No inventory file was edited here.
 
-The reporting queries contain typographical and alias errors. Those files are
-owned by the reporting member and are not modified by this module.
+Reporting now has its own procedure installer and README under
+`../Management reporting/`. Follow its owner's dependency instructions; it is
+not part of the catalogue installation. Validate shared column names during
+integration rather than relying on older reporting-query notes.
 
 The reporting access log depends on an `employee` table that has not yet been
 created.

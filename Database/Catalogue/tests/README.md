@@ -4,6 +4,13 @@ Use a disposable MySQL instance only. These tests are for the milestone-2
 fixtures: forty products, ten categories, forty-eight variants and eighty mappings. No Python
 or application backend is required. Do not change the team's shared database.
 
+Before preparing a fresh instance, read the [fresh-install blockers](../README.md#fresh-install-blockers-to-resolve-with-the-owners).
+The inventory files are now under `Database/Inventory & Delivery/`, and the
+shared seed also inserts deliveries that need checkout tables and orders
+101–104. The tests do not supply those dependencies. Do not continue after a
+failed setup script or treat the historical MySQL 9.7.1 results as a successful
+run of the current combined installer.
+
 ## Automated foundation assertions
 
 Follow the parent README's setup order, then execute `test_foundation.sql` in
@@ -76,7 +83,8 @@ again after removing it.
 ## Pre-integration failure checks
 
 On a separate fresh disposable instance, run setup through the inventory seed
-(steps 1–6 in the parent README). Do NOT run `05_variant_integration.sql` yet.
+(steps 1–6 in the parent README, including the owners' prerequisites before
+step 6). Do NOT run `05_variant_integration.sql` yet.
 Run each case below separately and inspect the expected error before proceeding.
 
 1. Insert a null product reference:
