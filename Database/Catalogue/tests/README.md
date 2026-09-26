@@ -125,6 +125,37 @@ again after removing it.
 
 ## Pre-integration failure checks
 
+### Automated SQL regression
+
+`test_preintegration.sql` adds **14 assertions** for null/orphan rejection,
+unchanged product-column nullability/indexes/foreign keys on rejection,
+incompatible foreign-key rejection, recovery, supporting-index reuse and a
+second successful integration. It loads the real integration helper definition;
+no production SQL is duplicated or modified. See the
+[separate Docker setup](MYSQL8_DOCKER.md#separate-pre-integration-test-instance)
+for executable commands that omit only the installer's final CALL/DROP from
+the input stream before the test runs.
+
+Use a **new disposable instance** before running `05` or `05b`, with only the
+five original inventory variants. Do not run this against the already-integrated
+`brightbuy-catalogue-mysql8` container or any shared database. Tests add and
+remove invalid fixture 99999, create/remove one incompatible test FK, and leave
+the instance successfully integrated using `idx_preintegration_product`.
+DDL commits independently: on unexpected failure, stop, inspect the instance,
+and rebuild it before retrying. Do not assume ROLLBACK resets the schema.
+Successful completion removes test/integration helper procedures; failed runs
+can leave helpers or intermediate test state. This suite is intentionally not
+rerunnable on its successfully integrated output.
+
+Validated on a separate MySQL **8.0.46** container: all 14 assertions passed.
+The unchanged `05` installer then ran twice, the remaining catalogue fixtures
+and procedures were installed, and all 32 foundation, eight seed-safety and
+65 procedure assertions passed (**119 distinct checks** across the four suites).
+No teammate source files were edited. Checkout/delivery and case-sensitive
+server setup remain outside this catalogue-only validation.
+
+### Manual alternative
+
 On a separate fresh disposable instance, run setup through the inventory seed
 (steps 1–6 in the parent README, including the owners' prerequisites before
 step 6). Do NOT run `05_variant_integration.sql` yet.

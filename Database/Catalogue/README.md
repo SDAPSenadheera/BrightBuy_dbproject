@@ -235,6 +235,7 @@ their visibility checks and sorting, and adds four runnable procedure examples.
 - [x] Catalogue SQL tests
 - [x] Catalogue-only MySQL 8.0.46 Docker validation (97 assertions and reruns)
 - [x] Automated variant-seed preservation, collision and recovery checks (8 assertions)
+- [x] Pre-integration rejection and recovery tests (14 assertions on separate MySQL 8.0.46 instance)
 - [ ] Fresh full-project installation after resolving shared seed dependencies
 - [ ] Verification on the team's exact MySQL version
 - [ ] Backend/frontend integration verification
