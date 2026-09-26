@@ -38,4 +38,15 @@ BEGIN
     WHERE variant_id = NEW.variant_id;
 END //
 
+-- Trigger: Audit variant stock changes (SAF-7) (all changes in varient stock shall be written to this table)
+CREATE TRIGGER after_variant_update
+AFTER UPDATE ON variant
+FOR EACH ROW
+BEGIN
+    IF OLD.stock_quantity != NEW.stock_quantity THEN
+        INSERT INTO variant_audit (variant_id, old_stock_quantity, new_stock_quantity, changed_by)
+        VALUES (NEW.variant_id, OLD.stock_quantity, NEW.stock_quantity, USER());
+    END IF;
+END //
+
 DELIMITER ;
